@@ -57,8 +57,27 @@ export function osascriptStatements({ hasSubtitle, hasSound }) {
  * @property {string} [subtitle] - secondary line.
  * @property {string} body - notification body.
  * @property {string} [sound] - macOS sound name; empty means silent.
+ * @property {string} [soundFile] - audio file played with afplay; wins over `sound`.
  * @property {string} [group] - grouping key on backends that support it.
  */
+
+/** Expand a leading "~" so config can keep a readable $HOME path. */
+export function expandHome(path) {
+  if (typeof path !== 'string' || !path.startsWith('~/')) return path
+  return (process.env.HOME || '') + path.slice(1)
+}
+
+/**
+ * Play one audio file; failures only reach the log. This is what lets the
+ * notification reuse another app's tone (caf/aiff/wav/mp3 all work).
+ */
+async function playSoundFile(file, log) {
+  try {
+    await runFile('afplay', [file], 15000)
+  } catch (error) {
+    log(`afplay failed (${error?.message ?? error})`)
+  }
+}
 
 /**
  * Build the delivery object shared by the plugin and its tests.
@@ -79,17 +98,34 @@ export function createSender({ config, log = () => {} }) {
       electronNotification = null
       return null
     }
+    // The Electron main process exposes 'electron' through CJS require; a
+    // dynamic import can also resolve, so try the CJS route first and only
+    // then ESM. Both are contained: any failure just disables this backend.
+    let api
     try {
-      const module = await import('electron')
-      const Notification = module?.Notification ?? module?.default?.Notification
-      const supported = typeof Notification === 'function'
-        && (typeof Notification.isSupported !== 'function' || Notification.isSupported())
-      electronNotification = supported ? Notification : null
-      if (!supported) log('electron: Notification API unavailable')
+      const { createRequire } = await import('node:module')
+      api = createRequire(import.meta.url)('electron')
+      log('electron: loaded through require')
     } catch (error) {
-      log(`electron: import failed (${error?.message ?? error})`)
-      electronNotification = null
+      log(`electron: require failed (${error?.message ?? error})`)
     }
+    if (!api || typeof api.Notification !== 'function') {
+      try {
+        const module = await import('electron')
+        api = module?.default ?? module
+        log('electron: loaded through import')
+      } catch (error) {
+        log(`electron: import failed (${error?.message ?? error})`)
+      }
+    }
+    const Notification = api?.Notification
+    const supported = typeof Notification === 'function'
+      && (typeof Notification.isSupported !== 'function' || Notification.isSupported())
+    if (!supported) {
+      const shape = api && typeof api === 'object' ? Object.keys(api).slice(0, 10).join(',') : typeof api
+      log('electron: Notification API unavailable (module=' + shape + ', notification=' + typeof Notification + ')')
+    }
+    electronNotification = supported ? Notification : null
     return electronNotification
   }
 
@@ -196,11 +232,23 @@ export function createSender({ config, log = () => {} }) {
    */
   async function send(payload) {
     if (!MAC) return 'skipped: not macOS'
+    // A sound file takes over the sound: the banner is posted silently while
+    // afplay plays the exact tone, so any app's notification sound can be reused.
+    let effective = payload
+    if (payload.soundFile) {
+      const file = expandHome(payload.soundFile)
+      if (existsSync(file)) {
+        effective = { ...payload, sound: '' }
+        void playSoundFile(file, log)
+      } else {
+        log('sound file missing: ' + file)
+      }
+    }
     if (config.backend === 'electron' || config.backend === 'auto') {
       const Notification = await loadElectronNotification()
       if (Notification) {
         try {
-          return await sendWithElectron(Notification, payload)
+          return await sendWithElectron(Notification, effective)
         } catch (error) {
           if (config.backend === 'electron') throw error
           log(`electron: falling back (${error?.message ?? error})`)
@@ -210,24 +258,30 @@ export function createSender({ config, log = () => {} }) {
     }
     if (config.backend === 'auto') {
       try {
-        return await sendWithTerminalNotifier(payload)
+        return await sendWithTerminalNotifier(effective)
       } catch (error) {
         log(`terminal-notifier: falling back (${error?.message ?? error})`)
       }
-      return sendWithOsascript(payload)
+      return sendWithOsascript(effective)
     }
     const backend = named[config.backend]
     if (!backend) throw new Error(`unknown backend "${config.backend}"`)
-    return backend(payload)
+    return backend(effective)
   }
 
-  /** @returns {Promise<{platform: string, backend: string, electron: boolean, terminalNotifier: boolean}>} */
+  /** @returns {Promise<object>} what this host process can actually deliver through. */
   async function describe() {
     return {
       platform: process.platform,
       backend: config.backend,
       electron: Boolean(await loadElectronNotification()),
       terminalNotifier: Boolean(findTerminalNotifier()),
+      runtime: {
+        pid: process.pid,
+        execPath: process.execPath,
+        electron: process.versions.electron ?? null,
+        node: process.versions.node,
+      },
     }
   }
 

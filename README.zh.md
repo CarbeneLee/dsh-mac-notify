@@ -102,6 +102,10 @@ node "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/primary-runt
 | `errorSound` | `Basso` | 失败提示音 |
 | `approvalSound` | `Ping` | 批准提示音 |
 | `questionSound` | `Ping` | 提问提示音 |
+| `completeSoundFile` | `""` | 音频文件当提示音，优先于上面的系统声音名 |
+| `errorSoundFile` | `""` | 同上 |
+| `approvalSoundFile` | `""` | 同上 |
+| `questionSoundFile` | `""` | 同上 |
 | `backend` | `osascript` | 见下方「投递后端」 |
 | `command` | `""` | `backend: command` 时执行的命令 |
 | `minIntervalMs` | `300` | 同一类通知的最小间隔，避免连发 |
@@ -111,12 +115,35 @@ node "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/primary-runt
 
 声音名就是系统里的那套：`Glass`、`Ping`、`Basso`、`Submarine`、`Hero`…，填 `""` 静音。
 
+## 自定义提示音（微信 / QQ 同款）
+
+`*SoundFile` 支持任意 `afplay` 能播的音频（caf / aiff / wav / mp3），所以可以直接借用别的 App 的提示音。以微信 macOS 版的「叮」为例：
+
+```sh
+mkdir -p ~/.dsh/dsh-mac-notify/sounds
+cp /Applications/WeChat.app/Contents/Resources/notify.caf \
+   ~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf
+```
+
+```yaml
+- id: dsh-mac-notify
+  config:
+    completeSoundFile: "~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf"
+    errorSoundFile: "~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf"
+    approvalSoundFile: "~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf"
+    questionSoundFile: "~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf"
+```
+
+- 复制到自己的目录而不是直接引用 App 包内路径，App 升级/搬走后不会失联。
+- 四个事件可以各用各的声音；留空则回落到 `completeSound` 那套系统声音名。
+- QQ macOS 版没有可直接提取的消息提示音（打包在资源里），微信 `notify.caf` 是最省事的同款选择；也可以放任何自己喜欢的音频。
+
 ## 投递后端
 
 | backend | 说明 |
 | --- | --- |
 | `osascript`（默认） | `display notification`，零依赖，任何 macOS 进程都能用；通知中心里归属「脚本编辑器」 |
-| `electron` | 在 DSH 桌面版内用 Electron 原生通知，归属「DeepSeek Harness」，点击可唤起应用；首次会请求通知权限 |
+| `electron` | Electron 原生通知，归属「DeepSeek Harness」、点击可唤起应用；只在插件宿主拿得到 `electron` 模块时有效——实测本机 DSH 桌面版（Electron 44）不给插件暴露该模块，会自动降级（debug 日志会写明） |
 | `terminal-notifier` | 已装 `brew install terminal-notifier` 时可用，支持分组 |
 | `command` | 自己接一条命令，payload 走环境变量 `DSH_NOTIFY_TITLE/SUBTITLE/BODY/SOUND/GROUP` |
 | `auto` | Electron → terminal-notifier → osascript 逐级降级 |

@@ -204,6 +204,7 @@ export function apply(ctx, rawConfig, deps) {
           subtitle: withDuration(labels.complete, duration),
           body: clampText(detail, config.maxBodyChars),
           sound: config.completeSound,
+          soundFile: config.completeSoundFile,
           group: 'dsh-complete',
         }, 'complete')
         return
@@ -217,6 +218,7 @@ export function apply(ctx, rawConfig, deps) {
           subtitle: withDuration(labels.error, duration),
           body: clampText(detail, config.maxBodyChars),
           sound: config.errorSound,
+          soundFile: config.errorSoundFile,
           group: 'dsh-error',
         }, 'error')
         return
@@ -228,6 +230,7 @@ export function apply(ctx, rawConfig, deps) {
           subtitle: withDuration(labels.maxTokens, duration),
           body: clampText(label || labels.noDetail, config.maxBodyChars),
           sound: config.errorSound,
+          soundFile: config.errorSoundFile,
           group: 'dsh-error',
         }, 'error')
         return
@@ -239,6 +242,7 @@ export function apply(ctx, rawConfig, deps) {
           subtitle: labels.blocked,
           body: clampText(label || labels.noDetail, config.maxBodyChars),
           sound: config.completeSound,
+          soundFile: config.completeSoundFile,
           group: 'dsh-blocked',
         }, 'blocked')
         return
@@ -294,6 +298,7 @@ export function apply(ctx, rawConfig, deps) {
           subtitle: labels.approval,
           body: clampText(label ? detail + ' · ' + label : detail, config.maxBodyChars),
           sound: config.approvalSound,
+          soundFile: config.approvalSoundFile,
           group: 'dsh-approval',
         }, 'approval')
       }
@@ -318,6 +323,7 @@ export function apply(ctx, rawConfig, deps) {
           subtitle: isPlanReview ? labels.planReview : labels.question,
           body: clampText((text || label || labels.noDetail) + suffix, config.maxBodyChars),
           sound: config.questionSound,
+          soundFile: config.questionSoundFile,
           group: 'dsh-question',
         }, 'question')
       }
@@ -361,6 +367,7 @@ export function apply(ctx, rawConfig, deps) {
               subtitle: labels.test,
               body: labels.testBody,
               sound: config.approvalSound,
+              soundFile: config.approvalSoundFile,
               group: 'dsh-test',
             })
             return {
@@ -386,6 +393,7 @@ export function apply(ctx, rawConfig, deps) {
     })
   }
 
-  log('mounted (backend=' + config.backend + ', locale=' + config.locale + ')')
+  log('mounted (backend=' + config.backend + ', locale=' + config.locale + ', pid=' + process.pid
+    + ', electron=' + (process.versions.electron ?? 'no') + ')')
   return { flush: () => Promise.all([...pending]) }
 }

@@ -33,6 +33,15 @@ export const DEFAULTS = Object.freeze({
   errorSound: 'Basso',
   approvalSound: 'Ping',
   questionSound: 'Ping',
+  /**
+   * Optional audio files (caf/aiff/wav/mp3/...) played with afplay. They win
+   * over the named sound above, so any app's tone can be reused — e.g. WeChat's
+   * notify.caf or your own download.
+   */
+  completeSoundFile: '',
+  errorSoundFile: '',
+  approvalSoundFile: '',
+  questionSoundFile: '',
 
   /** "osascript" (default) | "electron" | "terminal-notifier" | "command" | "auto". */
   backend: 'osascript',
@@ -106,6 +115,10 @@ export function normalizeConfig(raw) {
     errorSound: string(input.errorSound, DEFAULTS.errorSound),
     approvalSound: string(input.approvalSound, DEFAULTS.approvalSound),
     questionSound: string(input.questionSound, DEFAULTS.questionSound),
+    completeSoundFile: string(input.completeSoundFile, DEFAULTS.completeSoundFile),
+    errorSoundFile: string(input.errorSoundFile, DEFAULTS.errorSoundFile),
+    approvalSoundFile: string(input.approvalSoundFile, DEFAULTS.approvalSoundFile),
+    questionSoundFile: string(input.questionSoundFile, DEFAULTS.questionSoundFile),
 
     backend: BACKENDS.includes(input.backend) ? input.backend : DEFAULTS.backend,
     command: string(input.command, DEFAULTS.command),

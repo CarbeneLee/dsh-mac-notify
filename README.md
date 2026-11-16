@@ -100,6 +100,10 @@ Overrides live in the profile's `cordis.patch.yml`:
 | `errorSound` | `Basso` | |
 | `approvalSound` | `Ping` | |
 | `questionSound` | `Ping` | |
+| `completeSoundFile` | `""` | audio file for the tone; wins over the named sound |
+| `errorSoundFile` | `""` | |
+| `approvalSoundFile` | `""` | |
+| `questionSoundFile` | `""` | |
 | `backend` | `osascript` | see below |
 | `command` | `""` | command for `backend: command` |
 | `minIntervalMs` | `300` | throttle for burst notifications |
@@ -109,12 +113,33 @@ Overrides live in the profile's `cordis.patch.yml`:
 
 Sound names are the system ones (`Glass`, `Ping`, `Basso`, `Submarine`, `Hero`, …); `""` is silent.
 
+## Reuse another app's tone (WeChat / QQ)
+
+`*SoundFile` accepts anything `afplay` can play (caf / aiff / wav / mp3), so the notification can sound exactly like WeChat:
+
+```sh
+mkdir -p ~/.dsh/dsh-mac-notify/sounds
+cp /Applications/WeChat.app/Contents/Resources/notify.caf \
+   ~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf
+```
+
+```yaml
+- id: dsh-mac-notify
+  config:
+    completeSoundFile: "~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf"
+    errorSoundFile: "~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf"
+    approvalSoundFile: "~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf"
+    questionSoundFile: "~/.dsh/dsh-mac-notify/sounds/wechat-notify.caf"
+```
+
+Copy the file into your own directory instead of referencing the app bundle, so an app update cannot break it. Each event may use its own tone; empty falls back to the named system sound.
+
 ## Backends
 
 | backend | Notes |
 | --- | --- |
 | `osascript` (default) | `display notification`, zero dependencies, works from any macOS process; Notification Center attributes it to Script Editor |
-| `electron` | native Electron notification inside the desktop app: attributed to DeepSeek Harness, click activates the app, asks for permission once |
+| `electron` | native Electron notification: attributed to DeepSeek Harness, click activates the app. Only works where the plugin host can load the `electron` module — the shipped DSH desktop build (Electron 44) does not expose it to plugins, so this backend falls back (see the debug log) |
 | `terminal-notifier` | if `brew install terminal-notifier` is present; supports grouping |
 | `command` | pipe to your own command; the payload arrives as `DSH_NOTIFY_TITLE/SUBTITLE/BODY/SOUND/GROUP` |
 | `auto` | Electron → terminal-notifier → osascript |

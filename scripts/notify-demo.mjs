@@ -16,12 +16,14 @@ const config = normalizeConfig({ backend, debug: false })
 const sender = createSender({ config, log: (line) => console.log('[log] ' + line) })
 
 const text = process.env.DSH_NOTIFY_TEXT ?? '如果你看到这条通知，dsh-mac-notify 可以正常投递。'
+const soundFile = process.env.DSH_NOTIFY_SOUND_FILE ?? ''
 try {
   const used = await sender.send({
     title: config.appName,
     subtitle: '🔔 dsh-mac-notify 投递测试',
     body: text,
     sound: config.approvalSound,
+    soundFile,
     group: 'dsh-demo',
   })
   console.log('delivered via: ' + used)

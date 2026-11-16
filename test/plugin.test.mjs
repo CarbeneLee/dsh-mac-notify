@@ -77,6 +77,14 @@ test('completion banner names the task and the answer', async () => {
   assert.equal(banner.sound, 'Glass')
 })
 
+test('a configured sound file rides along with the banner', async () => {
+  const { ctx, sender, handle } = mount({ completeSoundFile: '/tmp/wechat.caf' })
+  const session = makeSession()
+  ctx.emit('session/event', session, endTurn(session, { kind: 'completed' }))
+  await handle.flush()
+  assert.equal(sender.sent[0].soundFile, '/tmp/wechat.caf')
+})
+
 test('failed turn reports the error message', async () => {
   const { ctx, sender, handle } = mount()
   const session = makeSession()
