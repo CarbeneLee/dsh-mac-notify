@@ -1,6 +1,6 @@
 {
   "name": "dsh-mac-notify",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Native macOS notifications for DeepSeek Harness: task completion, failures, approval requests and user questions.",
   "type": "module",
   "license": "MIT",
@@ -42,6 +42,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/CarbeneLee/dsh-mac-notify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CarbeneLee/dsh-mac-notify/issues"
   },
   "dsh": {
     "bundle": {
