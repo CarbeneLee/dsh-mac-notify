@@ -142,11 +142,12 @@ cp /Applications/WeChat.app/Contents/Resources/notify.caf \
 
 | backend | 说明 |
 | --- | --- |
-| `osascript`（默认） | `display notification`，零依赖，任何 macOS 进程都能用；通知中心里归属「脚本编辑器」 |
+| `helper`（推荐） | 用仓库里的 `DSHNotifier.app` 发通知：**显示 DSH 的图标**，点击横幅会唤起 DeepSeek Harness。需要先 `sh scripts/build-helper.sh` 构建一次 |
+| `osascript`（默认） | `display notification`，零依赖，任何 macOS 进程都能用；但图标归属「脚本编辑器」，点击没有任何反应 |
 | `electron` | Electron 原生通知，归属「DeepSeek Harness」、点击可唤起应用；只在插件宿主拿得到 `electron` 模块时有效——实测本机 DSH 桌面版（Electron 44）不给插件暴露该模块，会自动降级（debug 日志会写明） |
 | `terminal-notifier` | 已装 `brew install terminal-notifier` 时可用，支持分组 |
 | `command` | 自己接一条命令，payload 走环境变量 `DSH_NOTIFY_TITLE/SUBTITLE/BODY/SOUND/GROUP` |
-| `auto` | Electron → terminal-notifier → osascript 逐级降级 |
+| `auto` | Electron → helper → terminal-notifier → osascript 逐级降级 |
 
 `command` 示例（接飞书自定义机器人、`noti`、自研脚本都行）：
 
@@ -154,6 +155,30 @@ cp /Applications/WeChat.app/Contents/Resources/notify.caf \
 backend: command
 command: 'curl -s -X POST -H "Content-Type: application/json" -d "{\"text\":\"$DSH_NOTIFY_BODY\"}" https://example.com/hook'
 ```
+
+## 图标与点击（helper 后端）
+
+macOS 的通知图标**只能来自发通知的 App 本身**：AppleScript 走「脚本编辑器」，terminal-notifier 3.x 也删掉了 `-appIcon`（系统不允许覆盖）。所以仓库里带了一个极小的原生 App——`DSHNotifier.app`：
+
+- 它借用 DeepSeek Harness 的 `icon.icns`，所以横幅图标就是 DSH 那个蓝鲸标；
+- 点击横幅会启动它，它把 DeepSeek Harness 唤到前台后立刻退出（不会常驻、没有 Dock 图标）；
+- 首次发通知时，系统会问一次「DeepSeek Harness 想给你发送通知」，点允许即可（在「系统设置 → 通知」里也能看到它）。
+
+构建（只需要一次，需要 Xcode 命令行工具）：
+
+```sh
+sh scripts/build-helper.sh          # 默认装到 ~/.dsh/dsh-mac-notify/DSHNotifier.app
+```
+
+然后在 profile 配置里打开：
+
+```yaml
+- id: dsh-mac-notify
+  config:
+    backend: helper
+```
+
+> **关于「跳到对应会话」**：DSH 目前没有会话级的深链（`dsh://` 只注册了协议名，桌面端没有对应的 URL 处理），所以点击只能把 App 唤到前台，停在它上次所在的页面。等 DSH 提供深链能力后，只要在 helper 里改一行就能精确跳转。
 
 ## 排查
 

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { expandHome, osascriptStatements } from '../dsh/notify.js'
+import { defaultHelperPath, expandHome, osascriptStatements } from '../dsh/notify.js'
 
 test('expandHome only expands a leading ~/', () => {
   const home = process.env.HOME
@@ -8,6 +8,10 @@ test('expandHome only expands a leading ~/', () => {
   assert.equal(expandHome('/absolute/tone.caf'), '/absolute/tone.caf')
   assert.equal(expandHome('relative/tone.caf'), 'relative/tone.caf')
   assert.equal(expandHome(undefined), undefined)
+})
+
+test('defaultHelperPath points at the bundled helper app', () => {
+  assert.match(defaultHelperPath(), /dsh-mac-notify\/DSHNotifier\.app\/Contents\/MacOS\/DSHNotifier$/)
 })
 
 test('osascript statements keep every value in argv', () => {

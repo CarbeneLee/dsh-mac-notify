@@ -2,7 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { apply } from '../dsh/index.js'
 
-const BANNER_ZH = { complete: '✅ 任务完成', error: '❌ 任务失败', approval: '🔐 需要你的批准', question: '❓ 需要你的回答', planReview: '📋 计划等待你的确认' }
+const BANNER_ZH = {
+  complete: 'DeepSeek Harness 已完成任务',
+  error: 'DeepSeek Harness 任务失败',
+  approval: 'DeepSeek Harness 需要你的批准',
+  question: 'DeepSeek Harness 有一个问题等待你回答',
+  choice: 'DeepSeek Harness 需要你做出一个选择',
+  planReview: 'DeepSeek Harness 有一个计划等待你确认',
+}
 
 /** Minimal Cordis stand-in: records listeners, exposes emit(). */
 function fakeCtx() {
@@ -70,9 +77,8 @@ test('completion banner names the task and the answer', async () => {
 
   assert.equal(sender.sent.length, 1)
   const [banner] = sender.sent
-  assert.equal(banner.title, 'DeepSeek Harness')
-  assert.ok(banner.subtitle.startsWith(BANNER_ZH.complete), banner.subtitle)
-  assert.match(banner.body, /修复登录页样式/)
+  assert.equal(banner.title, BANNER_ZH.complete)
+  assert.equal(banner.subtitle, '修复登录页样式')
   assert.match(banner.body, /已修复三处样式/)
   assert.equal(banner.sound, 'Glass')
 })
@@ -93,7 +99,8 @@ test('failed turn reports the error message', async () => {
   await handle.flush()
 
   assert.equal(sender.sent.length, 1)
-  assert.equal(sender.sent[0].subtitle, BANNER_ZH.error)
+  assert.equal(sender.sent[0].title, BANNER_ZH.error)
+  assert.equal(sender.sent[0].subtitle, '跑一遍测试')
   assert.match(sender.sent[0].body, /HTTP 429/)
   assert.equal(sender.sent[0].sound, 'Basso')
 })
@@ -137,7 +144,7 @@ test('approval requests notify and still delegate', async () => {
   assert.equal(outcome, 'allowed-once')
   assert.equal(delegated, 1)
   assert.equal(sender.sent.length, 1)
-  assert.equal(sender.sent[0].subtitle, BANNER_ZH.approval)
+  assert.equal(sender.sent[0].title, BANNER_ZH.approval)
   assert.match(sender.sent[0].body, /bash/)
   assert.match(sender.sent[0].body, /工作区外/)
 })
@@ -168,7 +175,7 @@ test('questions notify with the question text and count', async () => {
   await handle.flush()
 
   assert.equal(sender.sent.length, 1)
-  assert.equal(sender.sent[0].subtitle, BANNER_ZH.question)
+  assert.equal(sender.sent[0].title, BANNER_ZH.question)
   assert.match(sender.sent[0].body, /要部署到哪个环境/)
   assert.match(sender.sent[0].body, /共 2 个问题/)
 })
@@ -181,7 +188,26 @@ test('plan review gets its own label', async () => {
     questions: [{ id: 'plan', question: '批准这个计划吗？', intent: { kind: 'plan-review', approve: '批准' } }],
   }, async () => ({ answers: [] }))
   await handle.flush()
-  assert.equal(sender.sent[0].subtitle, BANNER_ZH.planReview)
+  assert.equal(sender.sent[0].title, BANNER_ZH.planReview)
+})
+
+test('a question with options is announced as a choice, with the labels', async () => {
+  const { ctx, sender, handle } = mount()
+  const session = makeSession()
+  await ctx.emit('user-questions/request', {
+    agent: { session },
+    questions: [{
+      id: 'pick',
+      question: '要部署到哪个环境？',
+      options: [{ label: '开发' }, { label: '预发' }, { label: '生产' }],
+    }],
+  }, async () => ({ answers: [] }))
+  await handle.flush()
+
+  assert.equal(sender.sent[0].title, BANNER_ZH.choice)
+  assert.equal(sender.sent[0].subtitle, 'project')
+  assert.match(sender.sent[0].body, /要部署到哪个环境/)
+  assert.match(sender.sent[0].body, /开发 \/ 预发 \/ 生产/)
 })
 
 test('disabled config registers no listeners', () => {

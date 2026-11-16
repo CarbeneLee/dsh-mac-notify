@@ -1,6 +1,6 @@
 {
   "name": "dsh-mac-notify",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Native macOS notifications for DeepSeek Harness: task completion, failures, approval requests and user questions.",
   "type": "module",
   "license": "MIT",
@@ -14,6 +14,8 @@
   },
   "files": [
     "dsh",
+    "helper",
+    "scripts",
     "cordis.patch.yml",
     "README.md",
     "README.zh.md",

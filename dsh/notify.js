@@ -10,8 +10,19 @@
 
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 const MAC = process.platform === 'darwin'
+
+/**
+ * Where the bundled DSHNotifier.app executable lives by default.
+ * @returns {string} absolute path to the helper binary.
+ */
+export function defaultHelperPath() {
+  const home = process.env.DSH_HOME || join(homedir(), '.dsh')
+  return join(home, 'dsh-mac-notify', 'DSHNotifier.app', 'Contents', 'MacOS', 'DSHNotifier')
+}
 
 /** Where Homebrew puts terminal-notifier; PATH lookup is tried first. */
 const TERMINAL_NOTIFIER_CANDIDATES = [
@@ -180,6 +191,10 @@ export function createSender({ config, log = () => {} }) {
     if (payload.subtitle) args.push('-subtitle', payload.subtitle)
     if (payload.sound) args.push('-sound', payload.sound)
     if (payload.group) args.push('-group', payload.group)
+    // A custom .icns makes the banner wear the harness's own icon instead of
+    // terminal-notifier's.
+    const icon = config.appIcon ? expandHome(config.appIcon) : ''
+    if (icon && existsSync(icon)) args.push('-appIcon', icon)
     if (config.bundleId) args.push('-activate', config.bundleId)
     await runFile(binary, args)
     return 'terminal-notifier'
@@ -219,8 +234,25 @@ export function createSender({ config, log = () => {} }) {
     }, (error) => (error ? reject(error) : resolve('command')))
   })
 
+  // The helper is a real .app bundle, so the banner wears DeepSeek Harness's
+  // icon (macOS always takes it from the posting bundle) and a click launches
+  // the helper, which activates the app.
+  async function sendWithHelper(payload) {
+    const binary = expandHome(config.helperPath || defaultHelperPath())
+    if (!existsSync(binary)) {
+      throw new Error('DSHNotifier.app not built; run scripts/build-helper.sh')
+    }
+    const args = ['--post', '--title', payload.title, '--body', payload.body]
+    if (payload.subtitle) args.push('--subtitle', payload.subtitle)
+    if (payload.sound) args.push('--sound', payload.sound)
+    if (payload.group) args.push('--id', payload.group)
+    await runFile(binary, args, 10000)
+    return 'helper'
+  }
+
   const named = {
     osascript: sendWithOsascript,
+    helper: sendWithHelper,
     'terminal-notifier': sendWithTerminalNotifier,
     command: runCommand,
   }
@@ -258,6 +290,11 @@ export function createSender({ config, log = () => {} }) {
     }
     if (config.backend === 'auto') {
       try {
+        return await sendWithHelper(effective)
+      } catch (error) {
+        log(`helper: falling back (${error?.message ?? error})`)
+      }
+      try {
         return await sendWithTerminalNotifier(effective)
       } catch (error) {
         log(`terminal-notifier: falling back (${error?.message ?? error})`)
@@ -275,6 +312,7 @@ export function createSender({ config, log = () => {} }) {
       platform: process.platform,
       backend: config.backend,
       electron: Boolean(await loadElectronNotification()),
+      helper: existsSync(expandHome(config.helperPath || defaultHelperPath())),
       terminalNotifier: Boolean(findTerminalNotifier()),
       runtime: {
         pid: process.pid,

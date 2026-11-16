@@ -22,31 +22,46 @@ export const name = 'dsh-mac-notify'
 /** Notification wording. Keys mirror the seams above. */
 const LABELS = {
   zh: {
-    complete: '✅ 任务完成',
-    error: '❌ 任务失败',
-    blocked: '⏸ 任务被阻塞',
-    maxTokens: '⚠️ 输出达到上限',
-    approval: '🔐 需要你的批准',
-    question: '❓ 需要你的回答',
-    planReview: '📋 计划等待你的确认',
-    test: '🔔 通知测试',
+    complete: '已完成任务',
+    error: '任务失败',
+    blocked: '任务被阻塞',
+    maxTokens: '输出达到上限',
+    approval: '需要你的批准',
+    question: '有一个问题等待你回答',
+    choice: '需要你做出一个选择',
+    planReview: '有一个计划等待你确认',
+    test: '通知测试',
     testBody: '如果你看到这条通知，dsh-mac-notify 已经生效。',
     noDetail: '任务已结束',
     questionMany: (count) => '（共 ' + count + ' 个问题）',
+    options: (list) => '（选项：' + list + '）',
   },
   en: {
-    complete: '✅ Task complete',
-    error: '❌ Task failed',
-    blocked: '⏸ Task blocked',
-    maxTokens: '⚠️ Output limit reached',
-    approval: '🔐 Approval needed',
-    question: '❓ Your answer is needed',
-    planReview: '📋 Plan awaiting your review',
-    test: '🔔 Notification test',
+    complete: 'finished the task',
+    error: 'hit an error',
+    blocked: 'is blocked',
+    maxTokens: 'hit the output limit',
+    approval: 'needs your approval',
+    question: 'has a question for you',
+    choice: 'needs you to choose',
+    planReview: 'has a plan for you to review',
+    test: 'notification test',
     testBody: 'If you can read this, dsh-mac-notify is working.',
     noDetail: 'The task ended',
     questionMany: (count) => ' (' + count + ' questions)',
+    options: (list) => ' (options: ' + list + ')',
   },
+}
+
+/**
+ * The bold banner line: the app name plus what the app wants from you, so a
+ * glance answers "do I need to do something?".
+ * @param {string} appName - configured sender name.
+ * @param {string} phrase - action phrase from LABELS.
+ * @returns {string} the notification title.
+ */
+function bannerTitle(appName, phrase) {
+  return appName + ' ' + phrase
 }
 
 /**
@@ -198,11 +213,11 @@ export function apply(ctx, rawConfig, deps) {
     switch (reason.kind) {
       case 'completed': {
         if (!config.notifyOnComplete) return
-        const detail = label && answer ? label + ' — ' + answer : (label || answer || labels.noDetail)
+        const detail = [duration, answer].filter(Boolean).join(' · ')
         deliver({
-          title: config.appName,
-          subtitle: withDuration(labels.complete, duration),
-          body: clampText(detail, config.maxBodyChars),
+          title: bannerTitle(config.appName, labels.complete),
+          subtitle: label || undefined,
+          body: clampText(detail || labels.noDetail, config.maxBodyChars),
           sound: config.completeSound,
           soundFile: config.completeSoundFile,
           group: 'dsh-complete',
@@ -212,11 +227,10 @@ export function apply(ctx, rawConfig, deps) {
       case 'error': {
         if (!config.notifyOnError) return
         const message = clampText(describeError(reason.error), config.maxBodyChars)
-        const detail = label && message ? label + ' — ' + message : (message || label || labels.noDetail)
         deliver({
-          title: config.appName,
-          subtitle: withDuration(labels.error, duration),
-          body: clampText(detail, config.maxBodyChars),
+          title: bannerTitle(config.appName, labels.error),
+          subtitle: label || undefined,
+          body: clampText(message || labels.noDetail, config.maxBodyChars),
           sound: config.errorSound,
           soundFile: config.errorSoundFile,
           group: 'dsh-error',
@@ -226,9 +240,9 @@ export function apply(ctx, rawConfig, deps) {
       case 'max-tokens': {
         if (!config.notifyOnError) return
         deliver({
-          title: config.appName,
-          subtitle: withDuration(labels.maxTokens, duration),
-          body: clampText(label || labels.noDetail, config.maxBodyChars),
+          title: bannerTitle(config.appName, labels.maxTokens),
+          subtitle: label || undefined,
+          body: clampText(answer || labels.noDetail, config.maxBodyChars),
           sound: config.errorSound,
           soundFile: config.errorSoundFile,
           group: 'dsh-error',
@@ -238,9 +252,9 @@ export function apply(ctx, rawConfig, deps) {
       case 'blocked': {
         if (!config.notifyOnBlocked) return
         deliver({
-          title: config.appName,
-          subtitle: labels.blocked,
-          body: clampText(label || labels.noDetail, config.maxBodyChars),
+          title: bannerTitle(config.appName, labels.blocked),
+          subtitle: label || undefined,
+          body: clampText(labels.noDetail, config.maxBodyChars),
           sound: config.completeSound,
           soundFile: config.completeSoundFile,
           group: 'dsh-blocked',
@@ -294,9 +308,9 @@ export function apply(ctx, rawConfig, deps) {
         const detail = reason ? tool + ' · ' + reason : tool
         const label = taskLabel(session, state)
         deliver({
-          title: config.appName,
-          subtitle: labels.approval,
-          body: clampText(label ? detail + ' · ' + label : detail, config.maxBodyChars),
+          title: bannerTitle(config.appName, labels.approval),
+          subtitle: label || undefined,
+          body: clampText(detail, config.maxBodyChars),
           sound: config.approvalSound,
           soundFile: config.approvalSoundFile,
           group: 'dsh-approval',
@@ -314,14 +328,22 @@ export function apply(ctx, rawConfig, deps) {
         const questions = Array.isArray(request?.questions) ? request.questions : []
         const first = questions[0]
         const text = typeof first?.question === 'string' ? first.question : ''
+        const options = Array.isArray(first?.options) ? first.options : []
         const isPlanReview = first?.intent?.kind === 'plan-review'
+        // Options (or an approval-style intent) mean a decision is wanted, not
+        // a free-text answer — say so in the bold line.
+        const isChoice = !isPlanReview && (options.length > 0 || first?.intent?.kind === 'approval')
+        const phrase = isPlanReview ? labels.planReview : (isChoice ? labels.choice : labels.question)
         const session = request?.agent?.session
         const label = taskLabel(session, session ? stateOf(session) : undefined)
         const suffix = questions.length > 1 ? labels.questionMany(questions.length) : ''
+        const optionList = isChoice && options.length > 0
+          ? labels.options(options.slice(0, 4).map((option) => (typeof option?.label === 'string' ? option.label : '')).filter(Boolean).join(' / '))
+          : ''
         deliver({
-          title: config.appName,
-          subtitle: isPlanReview ? labels.planReview : labels.question,
-          body: clampText((text || label || labels.noDetail) + suffix, config.maxBodyChars),
+          title: bannerTitle(config.appName, phrase),
+          subtitle: label || undefined,
+          body: clampText((text || label || labels.noDetail) + optionList + suffix, config.maxBodyChars),
           sound: config.questionSound,
           soundFile: config.questionSoundFile,
           group: 'dsh-question',
@@ -363,8 +385,7 @@ export function apply(ctx, rawConfig, deps) {
           },
           async execute() {
             const backend = await sender.send({
-              title: config.appName,
-              subtitle: labels.test,
+              title: bannerTitle(config.appName, labels.test),
               body: labels.testBody,
               sound: config.approvalSound,
               soundFile: config.approvalSoundFile,
@@ -394,6 +415,7 @@ export function apply(ctx, rawConfig, deps) {
   }
 
   log('mounted (backend=' + config.backend + ', locale=' + config.locale + ', pid=' + process.pid
-    + ', electron=' + (process.versions.electron ?? 'no') + ')')
+    + ', electron=' + (process.versions.electron ?? 'no')
+    + ', process.type=' + (process.type ?? 'n/a') + ')')
   return { flush: () => Promise.all([...pending]) }
 }

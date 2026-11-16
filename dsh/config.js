@@ -43,8 +43,12 @@ export const DEFAULTS = Object.freeze({
   approvalSoundFile: '',
   questionSoundFile: '',
 
-  /** "osascript" (default) | "electron" | "terminal-notifier" | "command" | "auto". */
+  /** "osascript" (default) | "helper" | "electron" | "terminal-notifier" | "command" | "auto". */
   backend: 'osascript',
+  /** Binary inside DSHNotifier.app; empty means $DSH_HOME/dsh-mac-notify/DSHNotifier.app/... */
+  helperPath: '',
+  /** Optional .icns file used as the banner icon by the terminal-notifier backend. */
+  appIcon: '',
   /** Shell command for backend "command"; TITLE/SUBTITLE/BODY/SOUND arrive as env vars. */
   command: '',
 
@@ -58,7 +62,7 @@ export const DEFAULTS = Object.freeze({
   debug: false,
 })
 
-const BACKENDS = ['osascript', 'electron', 'terminal-notifier', 'command', 'auto']
+const BACKENDS = ['osascript', 'helper', 'electron', 'terminal-notifier', 'command', 'auto']
 const LOCALES = ['auto', 'zh', 'en']
 
 function bool(value, fallback) {
@@ -121,6 +125,8 @@ export function normalizeConfig(raw) {
     questionSoundFile: string(input.questionSoundFile, DEFAULTS.questionSoundFile),
 
     backend: BACKENDS.includes(input.backend) ? input.backend : DEFAULTS.backend,
+    helperPath: string(input.helperPath, DEFAULTS.helperPath),
+    appIcon: string(input.appIcon, DEFAULTS.appIcon),
     command: string(input.command, DEFAULTS.command),
 
     minIntervalMs: integer(input.minIntervalMs, DEFAULTS.minIntervalMs, 0, 60000),

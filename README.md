@@ -138,11 +138,12 @@ Copy the file into your own directory instead of referencing the app bundle, so 
 
 | backend | Notes |
 | --- | --- |
-| `osascript` (default) | `display notification`, zero dependencies, works from any macOS process; Notification Center attributes it to Script Editor |
+| `helper` (recommended) | posts through the bundled `DSHNotifier.app`: the banner wears **DSH's own icon**, and clicking it activates DeepSeek Harness. Build it once with `sh scripts/build-helper.sh` |
+| `osascript` (default) | `display notification`, zero dependencies, works from any macOS process; Notification Center attributes it to Script Editor and the banner is not clickable |
 | `electron` | native Electron notification: attributed to DeepSeek Harness, click activates the app. Only works where the plugin host can load the `electron` module — the shipped DSH desktop build (Electron 44) does not expose it to plugins, so this backend falls back (see the debug log) |
 | `terminal-notifier` | if `brew install terminal-notifier` is present; supports grouping |
 | `command` | pipe to your own command; the payload arrives as `DSH_NOTIFY_TITLE/SUBTITLE/BODY/SOUND/GROUP` |
-| `auto` | Electron → terminal-notifier → osascript |
+| `auto` | Electron → helper → terminal-notifier → osascript |
 
 `command` example (webhook, `noti`, a script of yours):
 
@@ -150,6 +151,30 @@ Copy the file into your own directory instead of referencing the app bundle, so 
 backend: command
 command: 'curl -s -X POST -H "Content-Type: application/json" -d "{\"text\":\"$DSH_NOTIFY_BODY\"}" https://example.com/hook'
 ```
+
+## Icon and click behaviour (helper backend)
+
+macOS draws a notification's icon **from the bundle that posted it**: AppleScript shows Script Editor, and terminal-notifier 3.x dropped `-appIcon` because the system forbids overriding it. The repo therefore ships a tiny native app, `DSHNotifier.app`:
+
+- it borrows DeepSeek Harness's `icon.icns`, so the banner shows the DSH whale mark;
+- clicking the banner launches it, it brings DeepSeek Harness to the front and quits immediately (no dock icon, no background process);
+- the first notification asks once for permission ("DeepSeek Harness wants to send you notifications") — allow it in System Settings → Notifications.
+
+Build it once (Xcode Command Line Tools required):
+
+```sh
+sh scripts/build-helper.sh     # installs to ~/.dsh/dsh-mac-notify/DSHNotifier.app
+```
+
+then enable it:
+
+```yaml
+- id: dsh-mac-notify
+  config:
+    backend: helper
+```
+
+> **Deep-linking to one session** is not possible yet: DSH registers the `dsh://` scheme but the desktop app has no URL handler, so a click can only raise the app, leaving it on the page it was last showing.
 
 ## Troubleshooting
 
