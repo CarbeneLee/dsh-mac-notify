@@ -351,7 +351,8 @@ export function apply(ctx, rawConfig, deps) {
           description: 'Send a test macOS notification through dsh-mac-notify and report which backend delivers it. Use when the user asks to verify or debug DSH notifications.',
           parameters: { type: 'object', properties: {} },
           output: {
-            schema: { type: 'json' },
+            // Any JSON object: the probe reports backend information and config.
+            schema: { type: 'object', additionalProperties: true },
             render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
           },
           async execute() {
