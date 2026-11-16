@@ -32,7 +32,7 @@ link:/绝对路径/dsh-mac-notify        # 本地开发
 github:CarbeneLee/dsh-mac-notify     # 直接从 GitHub 安装
 ```
 
-安装完**重启应用**（桌面 profile 没有 HMR，插件在下次启动时挂载）。
+桌面版默认开着 HMR，安装后通常**无需重启**就会自动挂载；如果横幅没出现，退出重开一次应用即可。
 
 ### Web 版 / 自定义 profile（CLI）
 
@@ -173,7 +173,7 @@ test/           node:test 用例
 
 - 只在 macOS 生效；其他平台静默跳过（不报错）。
 - `osascript` 后端的通知没有点击动作；想要点击唤起应用请用 `backend: electron`。
-- 桌面版 profile 无 HMR，改动后需要重启应用。
+- Profile 改动一般由 HMR 热挂载；极少数情况下需要重启应用才会重新组合。
 - 通知不区分「哪个窗口」，同一 profile 的所有会话共用一个通知流。
 
 ## License

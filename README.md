@@ -30,7 +30,7 @@ link:/absolute/path/to/dsh-mac-notify     # local checkout
 github:CarbeneLee/dsh-mac-notify          # straight from GitHub
 ```
 
-Then **restart the app** — the desktop profile has no HMR, plugins mount at boot.
+The desktop app ships HMR, so the bundle usually mounts **without a restart**; quit and reopen the app only if no banner appears.
 
 ### Web profile / custom profiles (CLI)
 
@@ -169,7 +169,7 @@ test/           node:test suite
 
 - macOS only; other platforms skip silently.
 - `osascript` banners have no click action; use `backend: electron` for click-to-activate.
-- The desktop profile has no HMR, so changes need an app restart.
+- Profile changes hot-apply through HMR; a restart is the fallback when a re-composition is refused.
 - Notifications carry no window identity: every session in the profile shares one stream.
 
 ## License
