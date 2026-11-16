@@ -39,7 +39,8 @@ github:CarbeneLee/dsh-mac-notify     # 直接从 GitHub 安装
 ### Web 版 / 自定义 profile（CLI）
 
 ```sh
-dsh plugin --profile web add github:CarbeneLee/dsh-mac-notify
+dsh plugin --profile web add dsh-mac-notify                    # 从 npm 安装（推荐）
+dsh plugin --profile web add github:CarbeneLee/dsh-mac-notify  # 或直接用 GitHub 源
 ```
 
 装好后默认走 `backend: auto`：先试 Electron 原生、再试原生 helper、再试 terminal-notifier，最后退回 osascript。**首次挂载时如果没有 `DSHNotifier.app`，插件会自动在后台构建一次**（需要 Xcode 命令行工具，几秒钟）；构建完成前通知照常由 osascript 投递，只是图标暂时是脚本编辑器的。想关掉自动构建就设 `DSH_MAC_NOTIFY_NO_BUILD=1`。

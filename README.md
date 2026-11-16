@@ -37,7 +37,8 @@ The desktop app ships HMR, so the bundle usually mounts **without a restart**; q
 ### Web profile / custom profiles (CLI)
 
 ```sh
-dsh plugin --profile web add github:CarbeneLee/dsh-mac-notify
+dsh plugin --profile web add dsh-mac-notify                    # from npm (recommended)
+dsh plugin --profile web add github:CarbeneLee/dsh-mac-notify  # or straight from GitHub
 ```
 
 The default backend is `auto`: Electron, then the native helper, then terminal-notifier, then osascript. **On first mount the plugin builds `DSHNotifier.app` in the background if it is missing** (Xcode Command Line Tools required, a few seconds); until it finishes, notifications still arrive through osascript with the Script Editor icon. Set `DSH_MAC_NOTIFY_NO_BUILD=1` to opt out.
