@@ -1,0 +1,11 @@
+# dsh-mac-notify bundle layer: mount the macOS notification plugin.
+#
+# The entry id is also the override key, so a profile can tune the banner
+# without touching this file by adding its own cordis.patch.yml row:
+#
+#   - id: dsh-mac-notify
+#     config:
+#       completeSound: Hero
+- insert:
+    - id: dsh-mac-notify
+      name: dsh-mac-notify
