@@ -1,10 +1,12 @@
 {
   "name": "dsh-mac-notify",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Native macOS notifications for DeepSeek Harness: task completion, failures, approval requests and user questions.",
   "type": "module",
   "license": "MIT",
   "author": "CarbeneLee",
+  "icon": "assets/icon.svg",
+  "homepage": "https://github.com/CarbeneLee/dsh-mac-notify#readme",
   "exports": {
     ".": "./dsh/index.js",
     "./notify": "./dsh/notify.js",
@@ -14,6 +16,7 @@
   },
   "files": [
     "dsh",
+    "assets",
     "helper",
     "scripts",
     "cordis.patch.yml",
@@ -42,6 +45,9 @@
   },
   "dsh": {
     "bundle": {
+      "platforms": [
+        "darwin"
+      ],
       "patch": "./cordis.patch.yml"
     }
   }

@@ -43,8 +43,8 @@ export const DEFAULTS = Object.freeze({
   approvalSoundFile: '',
   questionSoundFile: '',
 
-  /** "osascript" (default) | "helper" | "electron" | "terminal-notifier" | "command" | "auto". */
-  backend: 'osascript',
+  /** "auto" (default) | "helper" | "osascript" | "electron" | "terminal-notifier" | "command". */
+  backend: 'auto',
   /** Binary inside DSHNotifier.app; empty means $DSH_HOME/dsh-mac-notify/DSHNotifier.app/... */
   helperPath: '',
   /** Optional .icns file used as the banner icon by the terminal-notifier backend. */

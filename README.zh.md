@@ -4,7 +4,9 @@
 
 [English](./README.md)
 
-![事件一览](./docs/banner-events.svg)
+![事件一览](./docs/banner-events.png)
+
+> 仅支持 macOS。`package.json` 里已声明 `dsh.bundle.platforms: ["darwin"]`，Windows / Linux 宿主会跳过这个 bundle，不会装上一个空转的插件。
 
 ## 它能通知什么
 
@@ -39,6 +41,8 @@ github:CarbeneLee/dsh-mac-notify     # 直接从 GitHub 安装
 ```sh
 dsh plugin --profile web add github:CarbeneLee/dsh-mac-notify
 ```
+
+装好后默认走 `backend: auto`：先试 Electron 原生、再试原生 helper、再试 terminal-notifier，最后退回 osascript。**首次挂载时如果没有 `DSHNotifier.app`，插件会自动在后台构建一次**（需要 Xcode 命令行工具，几秒钟）；构建完成前通知照常由 osascript 投递，只是图标暂时是脚本编辑器的。想关掉自动构建就设 `DSH_MAC_NOTIFY_NO_BUILD=1`。
 
 ### 手动装配（不想用插件管理器）
 
@@ -106,7 +110,8 @@ node "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/primary-runt
 | `errorSoundFile` | `""` | 同上 |
 | `approvalSoundFile` | `""` | 同上 |
 | `questionSoundFile` | `""` | 同上 |
-| `backend` | `osascript` | 见下方「投递后端」 |
+| `backend` | `auto` | 见下方「投递后端」 |
+| `helperPath` | `""` | helper 可执行文件路径，默认 `$DSH_HOME/dsh-mac-notify/DSHNotifier.app/...` |
 | `command` | `""` | `backend: command` 时执行的命令 |
 | `minIntervalMs` | `300` | 同一类通知的最小间隔，避免连发 |
 | `maxBodyChars` | `220` | 正文最大字数 |
@@ -143,11 +148,11 @@ cp /Applications/WeChat.app/Contents/Resources/notify.caf \
 | backend | 说明 |
 | --- | --- |
 | `helper`（推荐） | 用仓库里的 `DSHNotifier.app` 发通知：**显示 DSH 的图标**，点击横幅会唤起 DeepSeek Harness。需要先 `sh scripts/build-helper.sh` 构建一次 |
-| `osascript`（默认） | `display notification`，零依赖，任何 macOS 进程都能用；但图标归属「脚本编辑器」，点击没有任何反应 |
+| `osascript` | `display notification`，零依赖，任何 macOS 进程都能用；但图标归属「脚本编辑器」，点击没有任何反应 |
 | `electron` | Electron 原生通知，归属「DeepSeek Harness」、点击可唤起应用；只在插件宿主拿得到 `electron` 模块时有效——实测本机 DSH 桌面版（Electron 44）不给插件暴露该模块，会自动降级（debug 日志会写明） |
 | `terminal-notifier` | 已装 `brew install terminal-notifier` 时可用，支持分组 |
 | `command` | 自己接一条命令，payload 走环境变量 `DSH_NOTIFY_TITLE/SUBTITLE/BODY/SOUND/GROUP` |
-| `auto` | Electron → helper → terminal-notifier → osascript 逐级降级 |
+| `auto`（默认） | Electron → helper → terminal-notifier → osascript 逐级降级 |
 
 `command` 示例（接飞书自定义机器人、`noti`、自研脚本都行）：
 

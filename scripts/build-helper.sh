@@ -8,7 +8,7 @@
 set -eu
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-OUT=${1:-"$HOME/.dsh/dsh-mac-notify/DSHNotifier.app"}
+OUT=${1:-"${DSH_HOME:-$HOME/.dsh}/dsh-mac-notify/DSHNotifier.app"}
 ICON=${2:-"/Applications/DeepSeek Harness.app/Contents/Resources/icon.icns"}
 
 if ! command -v swiftc >/dev/null 2>&1; then

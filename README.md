@@ -4,7 +4,9 @@ Native **macOS notifications** for [DeepSeek Harness (DSH)](https://github.com/d
 
 [中文说明](./README.zh.md)
 
-![Four banners](./docs/banner-events.svg)
+![Four banners](./docs/banner-events.png)
+
+> macOS only. The package declares `dsh.bundle.platforms: ["darwin"]`, so Windows and Linux hosts skip the bundle instead of installing a plugin that can never fire.
 
 ## What it notifies
 
@@ -37,6 +39,8 @@ The desktop app ships HMR, so the bundle usually mounts **without a restart**; q
 ```sh
 dsh plugin --profile web add github:CarbeneLee/dsh-mac-notify
 ```
+
+The default backend is `auto`: Electron, then the native helper, then terminal-notifier, then osascript. **On first mount the plugin builds `DSHNotifier.app` in the background if it is missing** (Xcode Command Line Tools required, a few seconds); until it finishes, notifications still arrive through osascript with the Script Editor icon. Set `DSH_MAC_NOTIFY_NO_BUILD=1` to opt out.
 
 ### Manual wiring
 
@@ -104,7 +108,8 @@ Overrides live in the profile's `cordis.patch.yml`:
 | `errorSoundFile` | `""` | |
 | `approvalSoundFile` | `""` | |
 | `questionSoundFile` | `""` | |
-| `backend` | `osascript` | see below |
+| `backend` | `auto` | see below |
+| `helperPath` | `""` | helper binary, defaults to `$DSH_HOME/dsh-mac-notify/DSHNotifier.app/...` |
 | `command` | `""` | command for `backend: command` |
 | `minIntervalMs` | `300` | throttle for burst notifications |
 | `maxBodyChars` | `220` | body budget |
@@ -139,11 +144,11 @@ Copy the file into your own directory instead of referencing the app bundle, so 
 | backend | Notes |
 | --- | --- |
 | `helper` (recommended) | posts through the bundled `DSHNotifier.app`: the banner wears **DSH's own icon**, and clicking it activates DeepSeek Harness. Build it once with `sh scripts/build-helper.sh` |
-| `osascript` (default) | `display notification`, zero dependencies, works from any macOS process; Notification Center attributes it to Script Editor and the banner is not clickable |
+| `osascript` | `display notification`, zero dependencies, works from any macOS process; Notification Center attributes it to Script Editor and the banner is not clickable |
 | `electron` | native Electron notification: attributed to DeepSeek Harness, click activates the app. Only works where the plugin host can load the `electron` module — the shipped DSH desktop build (Electron 44) does not expose it to plugins, so this backend falls back (see the debug log) |
 | `terminal-notifier` | if `brew install terminal-notifier` is present; supports grouping |
 | `command` | pipe to your own command; the payload arrives as `DSH_NOTIFY_TITLE/SUBTITLE/BODY/SOUND/GROUP` |
-| `auto` | Electron → helper → terminal-notifier → osascript |
+| `auto` (default) | Electron → helper → terminal-notifier → osascript |
 
 `command` example (webhook, `noti`, a script of yours):
 

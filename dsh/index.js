@@ -9,11 +9,43 @@
 // calls a service that may be absent, and never throws into the agent loop.
 // Delivery details live in ./notify.js; wording lives here.
 
-import { appendFileSync, mkdirSync } from 'node:fs'
+import { spawn } from 'node:child_process'
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { normalizeConfig } from './config.js'
-import { createSender, frontmostAppName } from './notify.js'
+import { createSender, defaultHelperPath, expandHome, frontmostAppName } from './notify.js'
+
+/** Package root, so the helper build script can be found after install. */
+const PACKAGE_ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
+
+/**
+ * Build DSHNotifier.app on first use when it is missing.
+ *
+ * The helper is what gives the banner DSH's icon; without it the plugin still
+ * works through osascript. Building needs Xcode Command Line Tools, so a
+ * missing toolchain is a logged downgrade, never a failure.
+ * @param {object} config - normalized plugin config.
+ * @param {(message: string) => void} log - debug logger.
+ */
+function maybeBuildHelper(config, log) {
+  if (process.env.DSH_MAC_NOTIFY_NO_BUILD === '1' || process.platform !== 'darwin') return
+  try {
+    if (existsSync(expandHome(config.helperPath || defaultHelperPath()))) return
+    const script = join(PACKAGE_ROOT, 'scripts', 'build-helper.sh')
+    if (!existsSync(script)) {
+      log('helper missing and build script absent')
+      return
+    }
+    log('helper missing; building in the background')
+    const child = spawn('sh', [script], { detached: true, stdio: 'ignore' })
+    child.on('error', (error) => log('helper build failed: ' + (error?.message ?? error)))
+    child.unref()
+  } catch (error) {
+    log('helper build setup failed: ' + (error?.message ?? error))
+  }
+}
 import { clampText, formatDuration, messageText } from './text.js'
 
 /** Cordis plugin name. */
@@ -141,6 +173,7 @@ export function apply(ctx, rawConfig, deps) {
 
   const sender = deps?.sender ?? createSender({ config, log })
   const frontmost = deps?.frontmost ?? frontmostAppName
+  if (!deps?.sender) maybeBuildHelper(config, log)
 
   /** Per-session scratch state: the task prompt, the last answer and turn timing. */
   function stateOf(session) {
